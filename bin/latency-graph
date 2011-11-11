@@ -1,0 +1,30 @@
+#!/usr/bin/env ruby
+
+MAX_LATENCY = 100_000
+SAMPLE_SIZE = 60
+OUTPUT_INTERVAL = 10
+TIMEOUT_THRESHOLD = 5
+
+latencies = []
+
+$stdin.each_line do |line|
+  if line =~ /^\d+ bytes from .*? icmp_seq=(\d+) ttl=\d+ time=(\d+\.\d+) ms$/
+    latencies[$1.to_i] = $2
+  end
+end
+
+sample_series = []
+latencies.each_with_index do |latency, i|
+  latency = latency ? latency.to_f : MAX_LATENCY
+  sample_series.push(latency)
+  if i >= SAMPLE_SIZE
+    sample_series.shift
+    if i % OUTPUT_INTERVAL == 0
+      if sample_series.count(MAX_LATENCY) >= TIMEOUT_THRESHOLD
+        puts
+      else
+        puts (sample_series.inject(:+) / SAMPLE_SIZE / 1000).round(3)
+      end
+    end
+  end
+end
