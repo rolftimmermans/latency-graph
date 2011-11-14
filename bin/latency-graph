@@ -1,5 +1,15 @@
 #!/usr/bin/env ruby
 
+# Extract the moving average of ICMP echo latency and save it as a list of
+# latency averages in seconds. The output can be considered a CSV file, even
+# though it has just one value per line.
+
+# Example:
+#   ping 8.8.8.8 > latency.txt
+#   (wait a while) ^C
+#
+#   bin/latency-graph < latency.txt > latency-moving-average.csv
+
 MAX_LATENCY = 100_000
 SAMPLE_SIZE = 60
 OUTPUT_INTERVAL = 10
@@ -15,15 +25,14 @@ end
 
 sample_series = []
 latencies.each_with_index do |latency, i|
-  latency = latency ? latency.to_f : MAX_LATENCY
-  sample_series.push(latency)
+  sample_series.push(latency ? latency.to_f : nil)
   if i >= SAMPLE_SIZE
     sample_series.shift
     if i % OUTPUT_INTERVAL == 0
-      if sample_series.count(MAX_LATENCY) >= TIMEOUT_THRESHOLD
+      if sample_series.count(nil) >= TIMEOUT_THRESHOLD
         puts
       else
-        puts (sample_series.inject(:+) / SAMPLE_SIZE / 1000).round(3)
+        puts (sample_series.compact.inject(:+) / sample_series.compact.size / 1000).round(3)
       end
     end
   end
